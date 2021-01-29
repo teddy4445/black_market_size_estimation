@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from model import MLmodel
 
 
@@ -41,16 +44,20 @@ class Main:
 
         if not os.path.exists(Main.ANSWER_FILE_PATH):
             with open(Main.ANSWER_FILE_PATH, "w") as answer_file:
-                answer_file.write("model_type,MSE_avg,MAE_avg,feature_importance,params\n")
+                answer_file.write("model_type,category,train_size,MSE_avg,MAE_avg,R2_avg,feature_importance,params\n")
 
-        with open(Main.ANSWER_FILE_PATH, "w") as answer_file:
+        with open(Main.ANSWER_FILE_PATH, "a") as answer_file:
             for model_name in [MLmodel.DT, MLmodel.RF, MLmodel.LG]:
+                print("Start testing model: {}".format(model_name))
+                scores_mae = []
+                scores_mse = []
+                scores_r2 = []
+                predictor = None
+                x = None
                 for train_size in range(Main.MIN_SAMPLES_TO_TRAIN, Main.MAX_SAMPLES_TO_TRAIN, Main.SAMPLES_STEP_SIZE):
-                    scores_mae = []
-                    scores_mse = []
+                    print("Working on {} train points and {} test points".format(train_size, Main.SAMPLES_STEP_SIZE))
                     for key, df in dfs.items():
-                        model_name = MLmodel.DT
-
+                        print("Working on df = {}".format(key))
                         x = df.drop([predict_col_name], axis=1)
                         y = df[predict_col_name]
 
@@ -59,16 +66,38 @@ class Main:
                                             x_test=x[train_size:train_size + Main.SAMPLES_STEP_SIZE],
                                             y_test=y[train_size:train_size + Main.SAMPLES_STEP_SIZE],
                                             model_name=model_name)
-                        predictor.fit(verbose=1)
-                        scores_mae.append(predictor.test_mae())
-                        scores_mse.append(predictor.test_mse())
+                        predictor.fit()
 
-                answer_file.write("{},{},{},{},{}\n".format(model_name,
-                                                            np.mean(scores_mse),
-                                                            np.mean(scores_mae),
-                                                            predictor.get_feature_importance(x_columns=list(x.columns)),
-                                                            predictor.get_params()))
+                        mse = predictor.test_mse()
+                        mae = predictor.test_mae()
+                        r2 = predictor.test_r2()
+                        print(
+                            "For model '{}' with {} train points and {} test points gets: mse = {:.7f}, mse = {:.7f}, r2 = {:.7f}".format(
+                                model_name, train_size, Main.SAMPLES_STEP_SIZE, mse, mae, r2
+                            ))
+                        if key == "all":
+                            scores_mae.append(mae)
+                            scores_mse.append(mse)
+                            scores_r2.append(r2)
 
+                        answer_file.write("{},{},{:.6f},{:.6f},{:.6f},{},{}\n"
+                                          .format(model_name,
+                                                  key,
+                                                  train_size,
+                                                  mse,
+                                                  mae,
+                                                  r2,
+                                                  predictor.get_feature_importance(x_columns=list(x.columns)),
+                                                  predictor.get_params()))
+
+                answer_file.write("{},all_model_summary,{},{:.6f},{:.6f},{:.6f},{},{}\n"
+                                  .format(model_name,
+                                          Main.MAX_SAMPLES_TO_TRAIN,
+                                          np.mean(scores_mse),
+                                          np.mean(scores_mae),
+                                          np.mean(scores_r2),
+                                          predictor.get_feature_importance(x_columns=list(x.columns)),
+                                          predictor.get_params()))
 
     @staticmethod
     def prepare_data() -> dict:
@@ -81,10 +110,10 @@ class Main:
         df_no_crime = df.drop(['RIFM'], axis=1)
         df_no_self_employ = df.drop(['ISEF', 'ISEM', 'ISE'], axis=1)
         # split into four data frames
-        dfs = {"all": df,
-               "no_tax": df_no_tax,
+        dfs = {"no_tax": df_no_tax,
                "no_crime": df_no_crime,
-               "no_self_employ": df_no_self_employ}
+               "no_self_employ": df_no_self_employ,
+               "all": df}
         return dfs
 
     @staticmethod
