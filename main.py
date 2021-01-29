@@ -54,7 +54,7 @@ class Main:
                 scores_r2 = []
                 predictor = None
                 x = None
-                for train_size in range(Main.MIN_SAMPLES_TO_TRAIN, Main.MAX_SAMPLES_TO_TRAIN, Main.SAMPLES_STEP_SIZE):
+                for train_size in range(Main.MIN_SAMPLES_TO_TRAIN, Main.MAX_SAMPLES_TO_TRAIN + 1, Main.SAMPLES_STEP_SIZE):
                     print("Working on {} train points and {} test points".format(train_size, Main.SAMPLES_STEP_SIZE))
                     for key, df in dfs.items():
                         print("Working on df = {}".format(key))
@@ -105,7 +105,7 @@ class Main:
         Prepare the data from the file as 4 data sets to work upon
         """
         df = pd.read_csv("data.csv")
-        df = df.drop(['YEAR', 'CW', 'ISEF1', 'ISEM1', 'ISE1', 'RPCYDCORRECTED', 'RPCYDN'], axis=1)
+        df = df.drop(['YEAR', 'CW', 'ISEF1', 'ISEM1', 'ISE1', 'RPCYDCORRECTED', 'RPCYDN', 'VOP'], axis=1)
         df_no_tax = df.drop(['TAX', 'TD', 'TI', 'TR1', 'TR2', 'TOG'], axis=1)
         df_no_crime = df.drop(['RIFM'], axis=1)
         df_no_self_employ = df.drop(['ISEF', 'ISEM', 'ISE'], axis=1)
