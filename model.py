@@ -1,12 +1,17 @@
 import numpy as np
+from sklearn.svm import SVR
+from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.tree import export_text
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.experimental import enable_halving_search_cv
+from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+
+from labib_model import LabibModel
 
 
 class MLmodel:
@@ -18,9 +23,14 @@ class MLmodel:
     DT = "dt"
     RF = "rf"
     LG = "lg"
+    KNN = "knn"
+    NN = "NN"
+    SVR = "SVR"
+    POLY2 = "poly2"
+    POLY3 = "poly3"
     LABIB = "labib"
 
-    MODELS = [DT, LG, LABIB]
+    MODELS = [LG, KNN, DT, RF]
     # end - model names #
 
     def __init__(self,
@@ -56,11 +66,18 @@ class MLmodel:
         elif self.model_name == MLmodel.LG:
             self.model = LinearRegression(positive=True)
         elif self.model_name == MLmodel.LABIB:
-            self.model = LinearRegression(positive=True)
+            self.model = LabibModel()
+        elif self.model_name == MLmodel.KNN:
+            self.model = KNeighborsRegressor()
+            self.parms = {'n_neighbors': [3, 4, 5, 6, 7]}
+        elif self.model_name == MLmodel.SVR:
+            self.model = SVR(gamma='auto')
+        elif self.model_name == MLmodel.NN:
+            self.model = MLPRegressor(random_state=1, max_iter=500)
 
         # ---> RUN THE MODEL <--- #
 
-        if self.model_name in [MLmodel.DT, MLmodel.RF]:
+        if self.model_name in [MLmodel.DT, MLmodel.RF, MLmodel.KNN]:
             self.best_model = GridSearchCV(self.model,
                                            self.parms,
                                            cv=5)
@@ -85,23 +102,24 @@ class MLmodel:
                                x_columns) -> dict:
         feature_importances = {}
         feature_importances_values = None
-        if self.model_name == MLmodel.DT:
-            try:
-                feature_importances_values = self.best_model.feature_importances_
-            except:
-                feature_importances_values = self.best_model.best_estimator_.feature_importances_
-        elif self.model_name == MLmodel.RF:
-            try:
-                feature_importances_values = self.best_model.feature_importances_
-            except:
-                feature_importances_values = self.best_model.best_estimator_.feature_importances_
-        elif self.model_name in [MLmodel.LG, MLmodel.LABIB]:
-            feature_importances_values = [abs(val) for val in self.best_model.coef_]
-            normalizer = sum(feature_importances_values)
-            feature_importances_values = [val / normalizer for val in feature_importances_values]
         feature_importances_names = list(x_columns)
-        for i in range(len(feature_importances_values)):
-            feature_importances[feature_importances_names[i]] = feature_importances_values[i]
+        try:
+            if self.model_name in [MLmodel.DT,  MLmodel.RF]:
+                try:
+                    feature_importances_values = self.best_model.feature_importances_
+                except:
+                    feature_importances_values = self.best_model.best_estimator_.feature_importances_
+            elif self.model_name in [MLmodel.LG, MLmodel.LABIB]:
+                feature_importances_values = [abs(val) for val in self.best_model.coef_]
+                normalizer = sum(feature_importances_values)
+                feature_importances_values = [val / normalizer for val in feature_importances_values]
+            elif self.model_name in [MLmodel.KNN]:
+                feature_importances_values = [1 / len(x_columns) for i in range(len(x_columns))]
+            for i in range(len(feature_importances_values)):
+                feature_importances[feature_importances_names[i]] = feature_importances_values[i]
+        except:
+            for i in range(len(feature_importances_names)):
+                feature_importances[feature_importances_names[i]] = 0
         return feature_importances
 
     def get_params(self) -> dict:

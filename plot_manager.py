@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -16,7 +17,27 @@ class PlotManager:
     colors = ["g", "b", "r", "c", "m", "y", "k"]
 
     @staticmethod
-    def plot_compare(x, y_list, models_names):
+    def analyze_data(df, model_type):
+
+        g = sns.pairplot(df, corner=True)
+        g.map_lower(sns.kdeplot, levels=4, color=".2")
+        plt.savefig(os.path.join(PlotManager.results_folder,
+                                 "data_pair_lot_{}.png".format(model_type)))
+        plt.close()
+
+        corr = df.corr()
+        sns.heatmap(corr,
+                    cmap='hot',
+                    vmin=-1,
+                    vmax=1)
+        plt.savefig(os.path.join(PlotManager.results_folder,
+                                 "data_features_heat_map_{}.png".format(model_type)))
+        plt.close()
+
+
+
+    @staticmethod
+    def plot_compare(x, y_list, models_names, train_size):
         min_min = 1
         max_max = 0
         for i, y in enumerate(y_list):
@@ -30,12 +51,39 @@ class PlotManager:
                 min_min = min(y)
             if max(y) > max_max:
                 max_max = max(y)
+        plt.plot([x[train_size], x[train_size]],
+                 [min_min * 0.95, max_max * 1.05],
+                 c="gray",
+                 markersize=8,
+                 label="Forecasting Start")
         plt.xlabel("Year (t)")
         plt.ylabel("RCW value")
         plt.ylim(min_min*0.95, max_max*1.05)
         plt.legend()
         plt.savefig(os.path.join(PlotManager.results_folder,
                                  "models_graph_compare.png"))
+        plt.close()
+
+        min_min = 1
+        max_max = 0
+        for i, y in enumerate(y_list):
+            plt.plot(x[train_size+1:],
+                     y[train_size+1:],
+                     marker=PlotManager.markers[i % len(PlotManager.markers)],
+                     c=PlotManager.colors[i % len(PlotManager.colors)],
+                     alpha=0.5,
+                     label="Historical values" if i == 0 else "Model's prediction ({})".format(models_names[i].split("_")[1]))
+            if min(y[train_size+1:]) < min_min:
+                min_min = min(y[train_size+1:])
+            if max(y[train_size+1:]) > max_max:
+                max_max = max(y[train_size+1:])
+        plt.xlabel("Year (t)")
+        plt.set_xticks(x[train_size+1:])
+        plt.ylabel("RCW value")
+        plt.ylim(min_min*0.95, max_max*1.05)
+        plt.legend()
+        plt.savefig(os.path.join(PlotManager.results_folder,
+                                 "models_graph_compare_only_prediction.png"))
         plt.close()
 
     @staticmethod

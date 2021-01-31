@@ -53,6 +53,10 @@ class Main:
         dfs = Main.prepare_data()
         predict_col_name = "RCW"
 
+        for key, df in dfs.items():
+            PlotManager.analyze_data(df=df,
+                                     model_type=key)
+
         if not os.path.exists(Main.ANSWER_FILE_PATH):
             with open(Main.ANSWER_FILE_PATH, "w") as answer_file:
                 answer_file.write("model_type,category,train_size,MSE_avg,MAE_avg,R2_avg,feature_importance,params\n")
@@ -127,7 +131,8 @@ class Main:
 
             PlotManager.plot_compare(x=[Main.START_YEAR + i for i in range(Main.END_YEAR - Main.START_YEAR + 1)],
                                      y_list=y_list,
-                                     models_names=names)
+                                     models_names=names,
+                                     train_size=Main.MAX_SAMPLES_TO_TRAIN)
 
     @staticmethod
     def prepare_data() -> dict:

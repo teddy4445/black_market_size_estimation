@@ -16,7 +16,7 @@ class LabibModel:
                       0.996577,
                       -0.415382]
 
-    def fit(self):
+    def fit(self, x_train, y_train):
         pass
 
     def predict(self, x: list) -> list:
