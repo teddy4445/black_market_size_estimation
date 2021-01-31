@@ -18,6 +18,9 @@ class MLmodel:
     DT = "dt"
     RF = "rf"
     LG = "lg"
+    LABIB = "labib"
+
+    MODELS = [DT, LG, LABIB]
     # end - model names #
 
     def __init__(self,
@@ -52,6 +55,8 @@ class MLmodel:
                           'ccp_alpha': [0, 0.01, 0.05, 0.1, 0.2]}
         elif self.model_name == MLmodel.LG:
             self.model = LinearRegression(positive=True)
+        elif self.model_name == MLmodel.LABIB:
+            self.model = LinearRegression(positive=True)
 
         # ---> RUN THE MODEL <--- #
 
@@ -73,6 +78,7 @@ class MLmodel:
         return r2_score(y_true=self.y_test, y_pred=self.best_model.predict(self.x_test))
 
     def predict(self, x: list = None) -> list:
+        x = [[float(val.replace(",", "") if isinstance(val, str) else val) for val in arr] for arr in list(x.values)]
         return self.best_model.predict(x if x is not None else self.x_train)
 
     def get_feature_importance(self,
@@ -89,8 +95,8 @@ class MLmodel:
                 feature_importances_values = self.best_model.feature_importances_
             except:
                 feature_importances_values = self.best_model.best_estimator_.feature_importances_
-        elif self.model_name == MLmodel.LG:
-            feature_importances_values = self.best_model.coef_
+        elif self.model_name in [MLmodel.LG, MLmodel.LABIB]:
+            feature_importances_values = [abs(val) for val in self.best_model.coef_]
             normalizer = sum(feature_importances_values)
             feature_importances_values = [val / normalizer for val in feature_importances_values]
         feature_importances_names = list(x_columns)

@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
+from plot_manager import PlotManager
+
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -23,10 +25,14 @@ class Main:
     """
 
     DATA_FOLDER = "data"
+    PLOT_FOLDER = "plot"
     ANSWER_FILE_PATH = os.path.join(os.path.dirname(__file__),DATA_FOLDER, "answer.csv")
 
+    START_YEAR = 1995
+    END_YEAR = 2019
+
     SAMPLES_STEP_SIZE = 3
-    MAX_SAMPLES_TO_TRAIN = 2019 - 1995 - SAMPLES_STEP_SIZE
+    MAX_SAMPLES_TO_TRAIN = END_YEAR - START_YEAR - SAMPLES_STEP_SIZE
     MIN_SAMPLES_TO_TRAIN = MAX_SAMPLES_TO_TRAIN - 4 * SAMPLES_STEP_SIZE
 
     def __init__(self):
@@ -38,6 +44,11 @@ class Main:
             os.makedirs(os.path.join(os.path.dirname(__file__), Main.DATA_FOLDER))
         except Exception as error:
             pass
+        try:
+            os.makedirs(os.path.join(os.path.dirname(__file__), Main.PLOT_FOLDER))
+        except Exception as error:
+            pass
+        raw_df = pd.read_csv("data.csv")
         
         dfs = Main.prepare_data()
         predict_col_name = "RCW"
@@ -47,7 +58,8 @@ class Main:
                 answer_file.write("model_type,category,train_size,MSE_avg,MAE_avg,R2_avg,feature_importance,params\n")
 
         with open(Main.ANSWER_FILE_PATH, "a") as answer_file:
-            for model_name in [MLmodel.DT, MLmodel.RF, MLmodel.LG]:
+            summery_predict_df = raw_df[["YEAR", "RCW"]]
+            for model_name in MLmodel.MODELS:
                 print("Start testing model: {}".format(model_name))
                 scores_mae = []
                 scores_mse = []
@@ -90,14 +102,32 @@ class Main:
                                                   predictor.get_feature_importance(x_columns=list(x.columns)),
                                                   predictor.get_params()))
 
+                feature_impt_dict = predictor.get_feature_importance(x_columns=list(x.columns))
+                # save a bar print
+                PlotManager.feature_importance(feature_name_val=feature_impt_dict,
+                                               model_name=model_name)
+
+                summery_predict_df["RCW_{}".format(model_name)] = predictor.predict(x=x)
+
                 answer_file.write("{},all_model_summary,{},{:.6f},{:.6f},{:.6f},{},{}\n"
                                   .format(model_name,
                                           Main.MAX_SAMPLES_TO_TRAIN,
                                           np.mean(scores_mse),
                                           np.mean(scores_mae),
                                           np.mean(scores_r2),
-                                          predictor.get_feature_importance(x_columns=list(x.columns)),
+                                          feature_impt_dict,
                                           predictor.get_params()))
+
+            y_list = []
+            names = []
+            for name in list(summery_predict_df):
+                if "RCW" in name:
+                    y_list.append(list(summery_predict_df[name]))
+                    names.append(name)
+
+            PlotManager.plot_compare(x=[Main.START_YEAR + i for i in range(Main.END_YEAR - Main.START_YEAR + 1)],
+                                     y_list=y_list,
+                                     models_names=names)
 
     @staticmethod
     def prepare_data() -> dict:
