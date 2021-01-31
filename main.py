@@ -53,9 +53,14 @@ class Main:
         dfs = Main.prepare_data()
         predict_col_name = "RCW"
 
-        for key, df in dfs.items():
-            PlotManager.analyze_data(df=df,
-                                     model_type=key)
+        if False:
+            for key, df in dfs.items():
+                print("Print analysis for {} data set".format(key))
+                new_df = df
+                new_df["pred"] = new_df["YEAR"].apply(lambda x: 0 if x < Main.END_YEAR - Main.SAMPLES_STEP_SIZE + 1 else 1)
+                new_df.drop(["YEAR"], axis=1, inplace=True)
+                PlotManager.analyze_data(df=df,
+                                         model_type=key)
 
         if not os.path.exists(Main.ANSWER_FILE_PATH):
             with open(Main.ANSWER_FILE_PATH, "w") as answer_file:
@@ -74,7 +79,7 @@ class Main:
                     print("Working on {} train points and {} test points".format(train_size, Main.SAMPLES_STEP_SIZE))
                     for key, df in dfs.items():
                         print("Working on df = {}".format(key))
-                        x = df.drop([predict_col_name], axis=1)
+                        x = df.drop([predict_col_name, "YEAR"], axis=1)
                         y = df[predict_col_name]
 
                         predictor = MLmodel(x_train=x.head(train_size),
@@ -140,7 +145,7 @@ class Main:
         Prepare the data from the file as 4 data sets to work upon
         """
         df = pd.read_csv("data.csv")
-        df = df.drop(['YEAR', 'CW', 'ISEF1', 'ISEM1', 'ISE1', 'RPCYDCORRECTED', 'RPCYDN', 'VOP'], axis=1)
+        df = df.drop(['CW', 'ISEF1', 'ISEM1', 'ISE1', 'RPCYDCORRECTED', 'RPCYDN', 'VOP'], axis=1)
         df_no_tax = df.drop(['TAX', 'TD', 'TI', 'TR1', 'TR2', 'TOG'], axis=1)
         df_no_crime = df.drop(['RIFM'], axis=1)
         df_no_self_employ = df.drop(['ISEF', 'ISEM', 'ISE'], axis=1)

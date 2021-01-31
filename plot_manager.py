@@ -19,8 +19,8 @@ class PlotManager:
     @staticmethod
     def analyze_data(df, model_type):
 
-        g = sns.pairplot(df, corner=True)
-        g.map_lower(sns.kdeplot, levels=4, color=".2")
+        g = sns.pairplot(df, corner=True, hue="pred")
+        g.map_lower(sns.kdeplot, levels=1, color=".2")
         plt.savefig(os.path.join(PlotManager.results_folder,
                                  "data_pair_lot_{}.png".format(model_type)))
         plt.close()
@@ -33,8 +33,6 @@ class PlotManager:
         plt.savefig(os.path.join(PlotManager.results_folder,
                                  "data_features_heat_map_{}.png".format(model_type)))
         plt.close()
-
-
 
     @staticmethod
     def plot_compare(x, y_list, models_names, train_size):
@@ -51,7 +49,7 @@ class PlotManager:
                 min_min = min(y)
             if max(y) > max_max:
                 max_max = max(y)
-        plt.plot([x[train_size], x[train_size]],
+        plt.plot([(x[train_size] + x[train_size+1])/2, (x[train_size] + x[train_size+1])/2],
                  [min_min * 0.95, max_max * 1.05],
                  c="gray",
                  markersize=8,
@@ -78,7 +76,6 @@ class PlotManager:
             if max(y[train_size+1:]) > max_max:
                 max_max = max(y[train_size+1:])
         plt.xlabel("Year (t)")
-        plt.set_xticks(x[train_size+1:])
         plt.ylabel("RCW value")
         plt.ylim(min_min*0.95, max_max*1.05)
         plt.legend()
