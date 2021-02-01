@@ -84,6 +84,58 @@ class PlotManager:
         plt.close()
 
     @staticmethod
+    def black_market_size(models: dict,
+                          vop: list,
+                          gdp: list,
+                          x: dict,
+                          model_name: str,
+                          start_year: int):
+        all_x = list(models["all"].predict(x=x["all"]))
+        no_tax_x = list(models["no_tax"].predict(x=x["no_tax"]))
+        no_crime_x = list(models["no_crime"].predict(x=x["no_crime"]))
+        no_self_employ_x = list(models["no_self_employ"].predict(x=x["no_self_employ"]))
+
+        y = [PlotManager.get_black_market_size(rcw_full_model=all_x[i],
+                                               rcw_without_tax_model=no_tax_x[i],
+                                               rcw_without_crime_model=no_crime_x[i],
+                                               rcw_without_self_employ_model=no_self_employ_x[i],
+                                               vop=vop[i],
+                                               gdp=gdp[i])
+             for i in range(len(all_x))]
+
+        plt.plot([start_year + i for i in range(len(y))],
+                 y,
+                 marker=PlotManager.markers[0],
+                 c=PlotManager.colors[0],
+                 alpha=0.5,
+                 label="Black Market Size ({})".format(model_name))
+        plt.xlabel("Year (t)")
+        plt.ylabel("Black Market Size (NIS)")
+        plt.ylim(0, 100)
+        plt.legend()
+        plt.savefig(os.path.join(PlotManager.results_folder,
+                                 "black_market_size_model_{}.png".format(model_name)))
+        plt.close()
+
+        with open(os.path.join(os.path.dirname(__file__), "data", "black_market_size_model_{}.csv".format(model_name)), "w") as data_file:
+            data_file.write("year,percent\n")
+            for i in range(len(y)):
+                data_file.write("{},{:.2f}\n".format(start_year+i, y[i]))
+
+    @staticmethod
+    def get_black_market_size(rcw_full_model: float,
+                              rcw_without_tax_model: float,
+                              rcw_without_crime_model: float,
+                              rcw_without_self_employ_model: float,
+                              vop: float,
+                              gdp: float):
+        gdp = float(gdp.replace(",", ""))
+        delta1 = (rcw_full_model - rcw_without_tax_model) * 1000 / vop * gdp
+        delta2 = (rcw_full_model - rcw_without_crime_model) * 1000 / vop * gdp
+        delta3 = (rcw_full_model - rcw_without_self_employ_model) * 1000 / vop* gdp
+        return abs(delta1 + delta2 + delta3) % 100
+
+    @staticmethod
     def feature_importance(feature_name_val: dict, model_name: str):
         labels = [key for key, val in feature_name_val.items()]
         vals = [val for key, val in feature_name_val.items()]

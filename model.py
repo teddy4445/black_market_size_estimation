@@ -3,11 +3,16 @@ from sklearn.svm import SVR
 from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.neural_network import MLPRegressor
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 
@@ -20,17 +25,21 @@ class MLmodel:
     """
 
     # model names #
-    DT = "dt"
-    RF = "rf"
+    DTR = "dtr"
+    RFR = "rfr"
     LG = "lg"
-    KNN = "knn"
+    KNNR = "knnr"
     NN = "NN"
     SVR = "SVR"
-    POLY2 = "poly2"
-    POLY3 = "poly3"
     LABIB = "labib"
 
-    MODELS = [LG, KNN, DT, RF]
+    DTC = "dtc"
+    KNNC = "knnc"
+    RFC = "RFC"
+    LR = "lr"
+
+    REGRESS_MODELS = [LG, KNNR, DTR, RFR]
+    CLASSIFY_MODELS = [LR, KNNC, DTC, RFC]
     # end - model names #
 
     def __init__(self,
@@ -53,12 +62,12 @@ class MLmodel:
 
         # ---> PICK THE MODEL TO TRAIN <--- #
 
-        if self.model_name == MLmodel.DT:
+        if self.model_name == MLmodel.DTR:
             self.model = DecisionTreeRegressor()
             self.parms = {'max_depth': [5, 7, 9, 11],
                           'min_samples_split': [5, 10, 15],
                           'ccp_alpha': [0, 0.01, 0.05]}
-        elif self.model_name == MLmodel.RF:
+        elif self.model_name == MLmodel.RFR:
             self.model = RandomForestRegressor(n_estimators=20)
             self.parms = {'max_depth': [3, 5, 7, 9, 11, 13],
                           'min_samples_split': [5, 10, 15],
@@ -67,23 +76,56 @@ class MLmodel:
             self.model = LinearRegression(positive=True)
         elif self.model_name == MLmodel.LABIB:
             self.model = LabibModel()
-        elif self.model_name == MLmodel.KNN:
+        elif self.model_name == MLmodel.KNNR:
             self.model = KNeighborsRegressor()
-            self.parms = {'n_neighbors': [3, 4, 5, 6, 7]}
+            self.parms = {'n_neighbors': [3, 4, 5, 6, 7],
+                          'weights': ['uniform', 'distance']}
         elif self.model_name == MLmodel.SVR:
             self.model = SVR(gamma='auto')
         elif self.model_name == MLmodel.NN:
             self.model = MLPRegressor(random_state=1, max_iter=500)
+        elif self.model_name == MLmodel.DTC:
+            self.model = DecisionTreeClassifier()
+            self.parms = {'max_depth': [3, 5, 7, 9, 11, 13],
+                          'criterion': ['gini', 'entropy'],
+                          'min_samples_split': [5, 10, 15],
+                          'ccp_alpha': [0, 0.01, 0.05, 0.1, 0.2]}
+        elif self.model_name == MLmodel.RFC:
+            self.model = RandomForestClassifier(n_estimators=20)
+            self.parms = {'max_depth': [3, 5, 7, 9, 11, 13],
+                          'criterion': ['gini', 'entropy'],
+                          'min_samples_split': [5, 10, 15],
+                          'ccp_alpha': [0, 0.01, 0.05, 0.1, 0.2]}
+        elif self.model_name == MLmodel.KNNC:
+            self.model = KNeighborsClassifier()
+            self.parms = {'n_neighbors': [3, 4, 5, 6, 7],
+                          'weights': ['uniform', 'distance']}
+        elif self.model_name == MLmodel.LR:
+            self.model = LogisticRegression(max_iter=200,
+                                            warm_start=True)
+            self.parms = {'penalty': ['l1', 'l2']}
 
         # ---> RUN THE MODEL <--- #
 
-        if self.model_name in [MLmodel.DT, MLmodel.RF, MLmodel.KNN]:
+        if self.model_name in [MLmodel.DTR, MLmodel.DTC, MLmodel.RFC, MLmodel.RFR, MLmodel.KNNR, MLmodel.KNNC, MLmodel.LR]:
             self.best_model = GridSearchCV(self.model,
                                            self.parms,
                                            cv=5)
         else:
             self.best_model = self.model
         self.best_model.fit(self.x_train, self.y_train)
+
+    def test_accuracy(self) -> float:
+        return accuracy_score(y_true=self.y_test, y_pred=self.best_model.predict(self.x_test))
+
+    def test_f1(self) -> float:
+        return f1_score(y_true=self.y_test, y_pred=self.best_model.predict(self.x_test))
+
+    def test_auc(self) -> float:
+        try:
+            return roc_auc_score(y_true=self.y_test, y_score=self.best_model.predict(self.x_test))
+        except:
+            return 0
 
     def test_mae(self) -> float:
         return mean_absolute_error(y_true=self.y_test, y_pred=self.best_model.predict(self.x_test))
@@ -104,16 +146,16 @@ class MLmodel:
         feature_importances_values = None
         feature_importances_names = list(x_columns)
         try:
-            if self.model_name in [MLmodel.DT,  MLmodel.RF]:
+            if self.model_name in [MLmodel.DTR,  MLmodel.RFR,  MLmodel.RFC,  MLmodel.DTC]:
                 try:
                     feature_importances_values = self.best_model.feature_importances_
                 except:
                     feature_importances_values = self.best_model.best_estimator_.feature_importances_
-            elif self.model_name in [MLmodel.LG, MLmodel.LABIB]:
+            elif self.model_name in [MLmodel.LG, MLmodel.LABIB, MLmodel.LR]:
                 feature_importances_values = [abs(val) for val in self.best_model.coef_]
                 normalizer = sum(feature_importances_values)
                 feature_importances_values = [val / normalizer for val in feature_importances_values]
-            elif self.model_name in [MLmodel.KNN]:
+            elif self.model_name in [MLmodel.KNNR, MLmodel.KNNC]:
                 feature_importances_values = [1 / len(x_columns) for i in range(len(x_columns))]
             for i in range(len(feature_importances_values)):
                 feature_importances[feature_importances_names[i]] = feature_importances_values[i]
@@ -123,12 +165,10 @@ class MLmodel:
         return feature_importances
 
     def get_params(self) -> dict:
-        if self.model_name == MLmodel.DT:
+        try:
             return self.best_model.get_params()
-        elif self.model_name == MLmodel.RF:
-            return self.best_model.get_params()
-        elif self.model_name == MLmodel.LG:
-            return self.best_model.get_params()
+        except:
+            return {}
 
     def compare_predict(self) -> list:
         y_pred = list(self.best_model.predict(self.x_train))
