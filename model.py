@@ -38,7 +38,7 @@ class MLmodel:
     RFC = "RFC"
     LR = "lr"
 
-    REGRESS_MODELS = [LG, KNNR, DTR, RFR]
+    REGRESS_MODELS = [LABIB, RFR]
     CLASSIFY_MODELS = [LR, KNNC, DTC, RFC]
     # end - model names #
 
@@ -73,9 +73,9 @@ class MLmodel:
                           'min_samples_split': [5, 10, 15],
                           'ccp_alpha': [0, 0.01, 0.05, 0.1, 0.2]}
         elif self.model_name == MLmodel.LG:
-            self.model = LinearRegression(positive=True)
+            self.model = LinearRegression(positive=False)
         elif self.model_name == MLmodel.LABIB:
-            self.model = LabibModel()
+            self.model = LinearRegression(positive=True) #LabibModel()
         elif self.model_name == MLmodel.KNNR:
             self.model = KNeighborsRegressor()
             self.parms = {'n_neighbors': [3, 4, 5, 6, 7],
@@ -151,12 +151,34 @@ class MLmodel:
                     feature_importances_values = self.best_model.feature_importances_
                 except:
                     feature_importances_values = self.best_model.best_estimator_.feature_importances_
-            elif self.model_name in [MLmodel.LG, MLmodel.LABIB, MLmodel.LR]:
+            elif self.model_name in [MLmodel.LG, MLmodel.LR]:
                 feature_importances_values = [abs(val) for val in self.best_model.coef_]
                 normalizer = sum(feature_importances_values)
                 feature_importances_values = [val / normalizer for val in feature_importances_values]
             elif self.model_name in [MLmodel.KNNR, MLmodel.KNNC]:
                 feature_importances_values = [1 / len(x_columns) for i in range(len(x_columns))]
+            elif self.model_name == MLmodel.LABIB:
+                labib = LabibModel()
+                feature_importances = {
+                    "RPCYD": labib.coef_[1],
+                    "IOTD": labib.coef_[2],
+                    "PRIME": labib.coef_[3],
+                    "RIFM": labib.coef_[4],
+                    "TI": labib.coef_[5],
+                    "TD": labib.coef_[6],
+                    "TR1": labib.coef_[7],
+                    "TR2": labib.coef_[8],
+                    "TAX": labib.coef_[9],
+                    "ISEM": labib.coef_[10],
+                    "ISE": labib.coef_[9] + labib.coef_[10]
+                }
+                normalizer = sum([abs(value) for key, value in feature_importances.items()])
+                for i in range(len(feature_importances_names)):
+                    if feature_importances_names[i] not in feature_importances.keys():
+                        feature_importances[feature_importances_names[i]] = 0
+                    else:
+                        feature_importances[feature_importances_names[i]] = abs(feature_importances[feature_importances_names[i]]) / normalizer
+                return feature_importances
             for i in range(len(feature_importances_values)):
                 feature_importances[feature_importances_names[i]] = feature_importances_values[i]
         except:
