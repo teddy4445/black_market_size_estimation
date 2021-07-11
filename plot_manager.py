@@ -156,8 +156,8 @@ class PlotManager:
         plt.close()
 
     @staticmethod
-    def black_market_size_from_file(file_path: str,
-                                    model_name: int):
+    def black_market_size_from_file_break_down(file_path: str,
+                                               model_name: int):
 
         x = []
         y1 = []
@@ -177,27 +177,24 @@ class PlotManager:
                 y3.append(float(items[3]))
                 y4.append(float(items[1]) - float(items[2]) - float(items[3]))
         y = [y1, y2, y3, y4]
-        y2_bottom = [y2[i] + y3[i] for i in range(len(y2))]
 
         fig, ax = plt.subplots()
         labels = ["Taxes", "Crime", "Self Employment"]
-        width = 0.75
+        width = 0.8
         for i in range(1, 4):
             plt.bar(x,
                     y[i],
-                    bottom=None if i == 1 else y2 if i == 2 else y2_bottom,
                     width=width,
-                    color=PlotManager.colors[i],
-                    label=labels[i-1])
-        plt.xlabel("Year (t)")
-        plt.ylabel("The share of the non-observed economy out of GDP")
-        plt.ylim(0, 25)
-        plt.legend()
-        ax.xaxis.set_ticks_position('none')
-        ax.yaxis.set_ticks_position('none')
-        plt.savefig(os.path.join(PlotManager.results_folder,
-                                 "black_market_size_model_from_file_break_down{}.png".format(model_name)))
-        plt.close()
+                    color='k')
+            plt.xlabel("Year (t)")
+            plt.ylabel("The share of the {} NOE out of GDP".format((labels[i-1]).strip().lower()))
+            plt.ylim(0, 25)
+            plt.legend()
+            ax.xaxis.set_ticks_position('none')
+            ax.yaxis.set_ticks_position('none')
+            plt.savefig(os.path.join(PlotManager.results_folder,
+                                     "black_market_size_model_from_file_break_down_{}_{}.png".format(model_name, labels[i - 1])))
+            plt.close()
 
     @staticmethod
     def get_black_market_size(rcw_full_model: float,
@@ -256,5 +253,5 @@ class PlotManager:
 
 
 if __name__ == '__main__':
-    PlotManager.black_market_size_from_file(file_path=os.path.join(os.path.dirname(__file__), "data", "black_market_size_model_rfr.csv"),
-                                            model_name="rfr")
+    PlotManager.black_market_size_from_file_break_down(file_path=os.path.join(os.path.dirname(__file__), "data", "black_market_size_model_rfr.csv"),
+                                                       model_name="rfr")

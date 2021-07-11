@@ -60,7 +60,7 @@ class Main:
         if is_direction:
             dfs = Main.fix_to_direction_data(dfs)
 
-        if True:
+        if False:
             for key, df in dfs.items():
                 print("Print analysis for {} data set".format(key))
                 new_df = df
@@ -79,7 +79,7 @@ class Main:
         with open(Main.ANSWER_FILE_PATH if not is_direction else Main.DIRECTION_ANSWER_FILE_PATH, "a") as answer_file:
             summery_predict_df = dfs["all"][["YEAR", "RCW"]]
             for model_name in MLmodel.REGRESS_MODELS if not is_direction else MLmodel.CLASSIFY_MODELS:
-                if True:
+                if True :
                     print("Start testing model: {}".format(model_name))
                     scores_mae = []
                     scores_mse = []
@@ -176,7 +176,7 @@ class Main:
             for name in list(summery_predict_df):
                 if "RCW" in name:
                     y_list.append(list(summery_predict_df[name]))
-                    names.append(name)
+                    names.append(name.replace("labib", "Shami et al. 2021").replace("rfr", "proposed model"))
 
             PlotManager.plot_compare(x=[Main.START_YEAR + i for i in range(Main.END_YEAR - Main.START_YEAR + 1)],
                                      y_list=y_list,
