@@ -58,10 +58,11 @@ class PlotManager:
                  label="Forecasting Start")
         plt.xlabel("Year (t)")
         plt.ylabel("RCW value")
+        plt.xticks([1995 + 4 * i for i in range(round((2019 - 1995)/4)+1)], [1995 + 4 * i for i in range(round((2019 - 1995)/4)+1)])
         plt.ylim(min_min*0.95, max_max*1.05)
         plt.legend()
         plt.savefig(os.path.join(PlotManager.results_folder,
-                                 "models_graph_compare.png"))
+                                 "signal_models_graph_compare.png"))
         plt.close()
 
         min_min = 1
@@ -79,10 +80,11 @@ class PlotManager:
                 max_max = max(y[train_size+1:])
         plt.xlabel("Year (t)")
         plt.ylabel("RCW value")
+        plt.xticks([2017, 2018, 2019], [2017, 2018, 2019])
         plt.ylim(min_min*0.95, max_max*1.05)
         plt.legend()
         plt.savefig(os.path.join(PlotManager.results_folder,
-                                 "models_graph_compare_only_prediction.png"))
+                                 "signal_models_graph_compare_only_prediction.png"))
         plt.close()
 
     @staticmethod

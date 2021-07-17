@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import StrMethodFormatter
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 
@@ -23,6 +24,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
+from plot_manager import PlotManager
 
 from main import Main
 
@@ -66,16 +68,20 @@ class Prediction:
         y_test = y[Prediction.MAX_SAMPLES_TO_TRAIN:]
         y_train = y.head(Prediction.MAX_SAMPLES_TO_TRAIN)
 
+        y_list = [list(y)]
+
         # fit model
         model = ARIMA(y_train)
         model = model.fit()
         # make prediction
         y_pred = model.predict(len(y_train) + 1, len(y_train) + len(y_test))
+
         mse_score_three_years = mean_squared_error(y_test, y_pred)
         mae_score_three_years = mean_absolute_error(y_test, y_pred)
         r2_three_years = r2_score(y_test, y_pred)
         print("ARIMA")
-        print("MSE = {:.8f}, MSE = {:.8f}, R2 = {:.8f}".format(mse_score_three_years, mae_score_three_years, r2_three_years))
+        print("MSE = {:.8f}, MSE = {:.8f}, R2 = {:.8f}".format(mse_score_three_years, mae_score_three_years,
+                                                               r2_three_years))
         """
         y_pred = [list(model.forecast(i + 1))[0] for i in range(len(y_test))]
         mse_score_three_years = mean_squared_error(list(y_test), y_pred)
@@ -90,12 +96,17 @@ class Prediction:
         print("AutoReg")
         model = AutoReg(y_train, lags=1)
         model_fit = model.fit()
+
+
+        y_list.append(model_fit.predict(1, len(y_train) + len(y_test)))
+
         # make prediction
         y_pred = model_fit.predict(len(y_train) + 1, len(y_train) + len(y_test))
         mse_score_three_years = mean_squared_error(y_test, y_pred)
         mae_score_three_years = mean_absolute_error(y_test, y_pred)
         r2_three_years = r2_score(y_test, y_pred)
-        print("MSE = {:.8f}, MSE = {:.8f}, R2 = {:.8f}".format(mse_score_three_years, mae_score_three_years, r2_three_years))
+        print("MSE = {:.8f}, MSE = {:.8f}, R2 = {:.8f}".format(mse_score_three_years, mae_score_three_years,
+                                                               r2_three_years))
         y_pred = [list(model_fit.predict(len(y_train) + i + 1, len(y_train) + i + 1))[0] for i in range(len(y_test))]
         mse_score_three_years = mean_squared_error(list(y_test), y_pred)
         r2_three_years = r2_score(y_test, y_pred)
@@ -103,7 +114,10 @@ class Prediction:
                                                                                    np.std(mse_score_three_years),
                                                                                    np.mean(r2_three_years),
                                                                                    np.std(r2_three_years)))
-
+        PlotManager.plot_compare(x=[Main.START_YEAR + i for i in range(Main.END_YEAR - Main.START_YEAR + 1)],
+                                 y_list=y_list,
+                                 models_names=["rcw_history", "rcw_Proposed model"],
+                                 train_size=Main.MAX_SAMPLES_TO_TRAIN)
     @staticmethod
     def run():
         try:
@@ -123,10 +137,10 @@ class Prediction:
 
             models = []
             models.append(('Shami et al.', LinearRegression()))
-            models.append(('Proposed model (RF)', RandomForestRegressor(max_depth=5,
-                                                                        min_samples_split=3,
-                                                                        ccp_alpha=0.01,
-                                                                        n_estimators=7)))  # Ensemble method - collection of many decision trees
+            models.append(('Proposed model', RandomForestRegressor(max_depth=5,
+                                                                   min_samples_split=3,
+                                                                   ccp_alpha=0.01,
+                                                                   n_estimators=100)))  # Ensemble method - collection of many decision trees
             # Evaluate each model in turn
             results = []
             names = []
@@ -138,10 +152,10 @@ class Prediction:
                 y_pred = model.predict(x_test)
                 mse_score = mean_squared_error(y_test, y_pred)
                 r2 = r2_score(y_test, y_pred)
-                results.append((mse_score, mse_score * (1 - r2)))
+                scale = 1000000 if "Shami" in name else 731754
+                results.append((mse_score, scale * mse_score * (1 - r2)))
                 names.append(name)
                 # print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
-                """
                 try:
                     imp = model.feature_importances_
                     features = x_train.columns
@@ -150,16 +164,17 @@ class Prediction:
                     plt.barh(range(len(indices)), imp[indices], color='b', align='center')
                     plt.yticks(range(len(indices)), [features[i] for i in indices])
                     plt.xlabel('Relative Importance')
-                    plt.savefig(os.path.join(os.path.dirname(__file__), "plot", "prediction", "feature_importance_{}_for_df_{}.png".format(name, key)))
+                    plt.savefig(os.path.join(os.path.dirname(__file__), "plot", "prediction",
+                                             "feature_importance_{}_for_df_{}.png".format(name, key)))
                     plt.close()
                 except Exception as error:
                     pass
-                """
 
             # Compare Algorithms
             plt.boxplot(results, labels=names)
-            plt.ylabel("Mean square error (3 years)")
+            plt.ylabel("$10^{-5}$ Mean square error (3 years)")
             plt.xlabel("Model")
+            plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))  # 2 decimal places
             plt.savefig(os.path.join(os.path.dirname(__file__), "plot", "prediction",
                                      "algorithm_comparision_for_df_{}.png".format(key)))
             plt.close()
@@ -209,4 +224,5 @@ class Prediction:
 
 
 if __name__ == '__main__':
+    # Prediction.run()
     Prediction.run_signal()
